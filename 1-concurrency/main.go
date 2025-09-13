@@ -39,14 +39,8 @@ func main() {
 }
 
 func generateSeries(sliceSize int, numCh chan int) {
-	slice := make([]int, sliceSize)
-
-	for i := range sliceSize {
-		slice[i] = rand.Intn(100)
-	}
-
-	for i := range sliceSize {
-		numCh <- slice[i]
+	for range sliceSize {
+		numCh <- rand.Intn(100)
 	}
 	close(numCh)
 }
