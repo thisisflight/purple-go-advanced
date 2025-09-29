@@ -27,7 +27,7 @@ func main() {
 
 	go func() {
 		wg.Wait()
-		close(squareNumCh)
+
 	}()
 
 	squareSlice := make([]string, 0, 10)
@@ -49,4 +49,5 @@ func generateSquareNums(numCh chan int, squareNumCh chan int) {
 	for num := range numCh {
 		squareNumCh <- num * num
 	}
+	close(squareNumCh)
 }
