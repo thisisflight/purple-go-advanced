@@ -36,7 +36,11 @@ func (h *VerifyHandler) Send() http.HandlerFunc {
 		email_text := fmt.Sprintf(
 			"Перейдите по ссылке, чтобы подтвердить почту: %s%s/verify/%s",
 			h.Config.ServerConfig.Schema, h.Config.ServerConfig.Addr, token)
-		mail.SendVerifyEmail(body.Email, email_text, h.Config)
+		err = mail.SendVerifyEmail(body.Email, email_text, h.Config)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 		h.repo.AddTokenRecord(&storage.TokenRecord{Email: body.Email, Token: token})
 		res.Json(w, "Sent", http.StatusOK)
 	}

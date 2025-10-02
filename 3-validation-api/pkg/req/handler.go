@@ -18,5 +18,3 @@ func HandleBody[T any](w http.ResponseWriter, req *http.Request) (*T, error) {
 	}
 	return &body, nil
 }
-
-// OV20pt8w3Q5K8D9BrXyw
