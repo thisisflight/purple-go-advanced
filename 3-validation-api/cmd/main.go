@@ -3,13 +3,17 @@ package main
 import (
 	"net/http"
 	"purple/links/configs"
+	"purple/links/files"
 	"purple/links/internal/verify"
+	"purple/links/storage"
 )
 
 func main() {
 	conf := configs.LoadConfig()
+	db := files.NewJSONDB("storage.json")
+	repo := storage.NewTokenRepository(db)
 	router := http.NewServeMux()
-	verify.NewVerifyHandler(router, conf)
+	verify.NewVerifyHandler(router, conf, repo)
 
 	server := http.Server{
 		Addr:    conf.ServerConfig.Addr,

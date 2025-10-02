@@ -16,10 +16,12 @@ type SMTPConfig struct {
 	Email    string
 	Password string
 	Address  string
+	Port     string
 }
 
 type ServerConfig struct {
-	Addr string
+	Schema string
+	Addr   string
 }
 
 func LoadConfig() *Config {
@@ -32,9 +34,11 @@ func LoadConfig() *Config {
 			Email:    os.Getenv("SMTP_EMAIL"),
 			Password: os.Getenv("SMTP_PASSWORD"),
 			Address:  os.Getenv("SMTP_ADDRESS"),
+			Port:     os.Getenv("SMTP_PORT"),
 		},
 		ServerConfig: ServerConfig{
-			Addr: os.Getenv("ADDR"),
+			Schema: os.Getenv("SCHEMA"),
+			Addr:   os.Getenv("ADDR"),
 		},
 	}
 }
