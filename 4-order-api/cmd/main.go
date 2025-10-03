@@ -5,11 +5,13 @@ import (
 	"purple/links/configs"
 	"purple/links/files"
 	"purple/links/internal/verify"
+	"purple/links/pkg/db"
 	"purple/links/storage"
 )
 
 func main() {
 	conf := configs.LoadConfig()
+	_ = db.NewDB(conf)
 	db := files.NewJSONDB("storage.json")
 	repo := storage.NewTokenRepository(db)
 	router := http.NewServeMux()
