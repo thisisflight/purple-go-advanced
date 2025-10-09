@@ -16,3 +16,12 @@ type Product struct {
 func (Product) TableName() string {
 	return "product"
 }
+
+func NewProduct(name string, description string, images pq.StringArray, isActive bool) *Product {
+	return &Product{
+		Name:        name,
+		Description: description,
+		Images:      images,
+		IsActive:    isActive,
+	}
+}
