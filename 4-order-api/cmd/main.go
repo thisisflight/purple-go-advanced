@@ -7,10 +7,18 @@ import (
 	"purple/links/internal/product"
 	"purple/links/internal/verify"
 	"purple/links/pkg/db"
+	"purple/links/pkg/middleware"
 	"purple/links/storage"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	logrus.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: time.RFC3339,
+	})
+	logrus.SetLevel(logrus.InfoLevel)
 	conf := configs.LoadConfig()
 	fileDB := files.NewJSONDB("storage.json")
 	mainDB := db.NewDB(conf)
@@ -21,9 +29,13 @@ func main() {
 	verify.NewVerifyHandler(router, conf, repo)
 	product.NewProductHandler(router, productDeps)
 
+	middlewareChain := middleware.Chain(
+		middleware.Logging,
+	)
+
 	server := http.Server{
 		Addr:    conf.ServerConfig.Addr,
-		Handler: router,
+		Handler: middlewareChain(router),
 	}
 	server.ListenAndServe()
 }

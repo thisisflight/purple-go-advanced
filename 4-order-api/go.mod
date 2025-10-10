@@ -6,6 +6,7 @@ require (
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
+	github.com/sirupsen/logrus v1.9.3
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.0
 )
