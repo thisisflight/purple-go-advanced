@@ -1,7 +1,6 @@
 package verify
 
 import (
-	"fmt"
 	"purple/links/internal/session"
 	"purple/links/pkg/db"
 	"purple/links/pkg/utils"
@@ -36,7 +35,6 @@ func (v *VerifyRepository) FindBySessionKey(sessionKey string) (*VerifyCode, err
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	fmt.Println("не должно быть выведено")
 	return &verifyCode, nil
 }
 

@@ -29,7 +29,7 @@ func (s *SessionRepository) Create(user *user.User) (*Session, error) {
 
 func (s *SessionRepository) FindByKey(key string) (*Session, error) {
 	var session Session
-	result := s.db.First(&session, "key = ?", key)
+	result := s.db.Preload("User").First(&session, "key = ?", key)
 	if result.Error != nil {
 		return nil, result.Error
 	}
