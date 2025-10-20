@@ -29,7 +29,7 @@ func main() {
 	userRepo := user.NewUserRepository(DB)
 	sessionRepo := session.NewSessionRepository(DB)
 	verifyRepo := verify.NewVerifyRepository(DB)
-	productDeps := product.ProductHandlerDeps{ProductRepository: productRepo}
+	productDeps := product.ProductHandlerDeps{ProductRepository: productRepo, Config: conf}
 	authServiceDeps := auth.AuthServiceDeps{
 		Conf:              conf,
 		UserRepository:    userRepo,
