@@ -3,6 +3,8 @@ package product
 import (
 	"errors"
 	"net/http"
+	"purple/links/configs"
+	"purple/links/pkg/middleware"
 	"purple/links/pkg/req"
 	pkg "purple/links/pkg/res"
 	"strconv"
@@ -12,6 +14,7 @@ import (
 
 type ProductHandlerDeps struct {
 	*ProductRepository
+	*configs.Config
 }
 
 type ProductHandler struct {
@@ -22,10 +25,10 @@ func NewProductHandler(router *http.ServeMux, deps ProductHandlerDeps) {
 	handler := &ProductHandler{
 		ProductRepository: deps.ProductRepository,
 	}
-	router.HandleFunc("POST /products", handler.Create())
+	router.Handle("POST /products", middleware.AuthMiddleware(handler.Create(), deps.Config))
 	router.HandleFunc("GET /products/{id}", handler.Read())
-	router.HandleFunc("PATCH /products/{id}", handler.Update())
-	router.HandleFunc("DELETE /products/{id}", handler.Delete())
+	router.Handle("PATCH /products/{id}", middleware.AuthMiddleware(handler.Update(), deps.Config))
+	router.Handle("DELETE /products/{id}", middleware.AuthMiddleware(handler.Delete(), deps.Config))
 }
 
 func (h *ProductHandler) Create() http.HandlerFunc {
