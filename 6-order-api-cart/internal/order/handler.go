@@ -25,7 +25,7 @@ func NewOrderHandler(router *http.ServeMux, deps OrderHandlerDeps) {
 	}
 	router.Handle("POST /order", middleware.AuthMiddleware(handler.Create(), deps.Config))
 	router.Handle("GET /order/{id}", middleware.AuthMiddleware(handler.Read(), deps.Config))
-	router.Handle("GET /my-orders", middleware.AuthMiddleware(handler.GetList(), deps.Config))
+	router.Handle("GET /my-orders", middleware.AuthMiddleware(handler.GetAll(), deps.Config))
 }
 
 func (h *OrderHandler) Create() http.HandlerFunc {
@@ -93,8 +93,20 @@ func (h *OrderHandler) Read() http.HandlerFunc {
 	}
 }
 
-func (h *OrderHandler) GetList() http.HandlerFunc {
+func (h *OrderHandler) GetAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+		if err != nil {
+			http.Error(w, "Invalid offset", http.StatusBadRequest)
+			return
+		}
+
+		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+		if err != nil {
+			http.Error(w, "Invalid limit", http.StatusBadRequest)
+			return
+		}
+
 		phoneNumber, ok := r.Context().Value(constants.ContextPhoneNumber).(string)
 		if !ok || phoneNumber == "" {
 			http.Error(w, "phone number not found in context", http.StatusBadRequest)
@@ -107,12 +119,17 @@ func (h *OrderHandler) GetList() http.HandlerFunc {
 			return
 		}
 
-		resp, err := h.OrderService.GetListByUserID(user.ID)
+		items, err := h.OrderService.GetListByUserID(user.ID, offset, limit)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		pkg.Json(w, resp, http.StatusOK)
+		count := h.OrderService.Count(user.ID)
+
+		pkg.Json(w, OrderListResponse{
+			Total: count,
+			Items: items,
+		}, http.StatusOK)
 	}
 }

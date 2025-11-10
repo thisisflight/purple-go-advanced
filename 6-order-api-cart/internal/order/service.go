@@ -63,18 +63,18 @@ func (s *OrderService) GetDetail(order *Order) (*OrderDetailResponse, error) {
 	return response, nil
 }
 
-func (s *OrderService) GetListByUserID(userID uint) ([]OrderDetailResponse, error) {
-	orders, err := s.OrderRepository.GetListByUserID(userID)
+func (s *OrderService) GetListByUserID(userID uint, offset, limit int) ([]OrderDetailResponse, error) {
+	orders, err := s.OrderRepository.GetListByUserID(userID, offset, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := make([]OrderDetailResponse, len(orders))
+	items := make([]OrderDetailResponse, len(orders))
 	for i, order := range orders {
-		resp[i] = *GetOrderDetailResponseData(&order)
+		items[i] = *GetOrderDetailResponseData(&order)
 	}
 
-	return resp, nil
+	return items, nil
 }
 
 func GetOrderDetailResponseData(order *Order) *OrderDetailResponse {

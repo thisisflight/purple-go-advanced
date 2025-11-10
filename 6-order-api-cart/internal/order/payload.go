@@ -31,6 +31,11 @@ type OrderDetailResponse struct {
 	Items     []OrderItemDetail `json:"items"`
 }
 
+type OrderListResponse struct {
+	Total int64                 `json:"total"`
+	Items []OrderDetailResponse `json:"items"`
+}
+
 type OrderItemRequest struct {
 	ProductID int64 `json:"product_id" validate:"required,gt=0"`
 	Quantity  int   `json:"quantity" validate:"omitempty,gt=0"`

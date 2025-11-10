@@ -95,18 +95,28 @@ func (or *OrderRepository) GetOrder(orderID uint64) (*Order, error) {
 	return &order, nil
 }
 
-func (or *OrderRepository) GetListByUserID(userID uint) ([]Order, error) {
-	orders := make([]Order, 20)
+func (or *OrderRepository) GetListByUserID(userID uint, offset, limit int) ([]Order, error) {
+	orders := make([]Order, limit)
 
 	err := or.db.
-		Where("user_id = ?", userID).
+		Where("user_id = ? AND deleted_at is NULL", userID).
 		Preload("OrderItems").
 		Preload("OrderItems.Product").
 		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
 		Find(&orders).Error
 
 	if err != nil {
 		return nil, err
 	}
 	return orders, nil
+}
+
+func (or *OrderRepository) Count(userID uint) int64 {
+	var count int64
+	or.db.Table("order").
+		Where("user_id = ? AND deleted_at is NULL", userID).
+		Count(&count)
+	return count
 }
