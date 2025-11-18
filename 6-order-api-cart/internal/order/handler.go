@@ -125,7 +125,7 @@ func (h *OrderHandler) GetAll() http.HandlerFunc {
 			return
 		}
 
-		count := h.OrderService.Count(user.ID)
+		count := h.OrderService.OrderRepository.Count(user.ID)
 
 		pkg.Json(w, OrderListResponse{
 			Total: count,

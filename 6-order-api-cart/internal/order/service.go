@@ -8,15 +8,15 @@ import (
 )
 
 type OrderServiceDeps struct {
-	*OrderRepository
-	*OrderValidator
-	*user.UserRepository
+	OrderRepository IOrderRepository
+	OrderValidator  IOrderValidator
+	UserRepository  user.IUserRepository
 }
 
 type OrderService struct {
-	*OrderRepository
-	*OrderValidator
-	*user.UserRepository
+	OrderRepository IOrderRepository
+	OrderValidator  IOrderValidator
+	UserRepository  user.IUserRepository
 }
 
 func NewOrderService(deps OrderServiceDeps) *OrderService {
@@ -28,7 +28,7 @@ func NewOrderService(deps OrderServiceDeps) *OrderService {
 }
 
 func (s *OrderService) CreateWithItems(ctx context.Context, req *OrderCreateRequest) (*Order, error) {
-	err := s.OrderValidator.validateProductsExist(req)
+	err := s.OrderValidator.ValidateProductsExist(req)
 	if err != nil {
 		return nil, err
 	}

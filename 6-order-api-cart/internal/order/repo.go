@@ -6,6 +6,17 @@ import (
 	"purple/links/pkg/db"
 )
 
+type IOrderRepository interface {
+	Create(order *Order) (*Order, error)
+	CreateWithItems(
+		ctx context.Context,
+		req *OrderCreateRequest,
+		user *user.User) (*Order, error)
+	GetOrder(orderID uint64) (*Order, error)
+	GetListByUserID(userID uint, offset, limit int) ([]Order, error)
+	Count(userID uint) int64
+}
+
 type OrderRepository struct {
 	db *db.DB
 }
