@@ -3,39 +3,79 @@ package order
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 
 	"purple/links/configs"
+	"purple/links/internal/product"
 	"purple/links/internal/user"
 	"purple/links/pkg/db"
 )
 
 const TEST_SECRET_KEY = "/2+XnmJGz1j3ehIVI/5P9kl+CghrE3DcS7rnT+qar5w="
 
-func setupTestDB(t *testing.T) (*db.DB, sqlmock.Sqlmock) {
-	sqlDB, mock, err := sqlmock.New()
-	require.NoError(t, err)
+func getTestDB() *db.DB {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{
-		Conn: sqlDB,
-	}), &gorm.Config{})
-	require.NoError(t, err)
+	cfg := &configs.Config{
+		Db: configs.DBConfig{
+			Dsn: os.Getenv("TEST_DSN"),
+		},
+	}
 
-	return &db.DB{DB: gormDB}, mock
+	return db.NewDB(cfg)
+}
+
+func prepareTestData(t *testing.T, db *db.DB) (userID uint, productID uint) {
+	testUser := &user.User{
+		PhoneNumber: "89206016463",
+		Name:        "Test User",
+	}
+	err := db.Create(testUser).Error
+	require.NoError(t, err)
+	userID = testUser.ID
+
+	testProduct := &product.Product{
+		Name:  "Test Product",
+		Price: decimal.NewFromFloat(100.0),
+	}
+	err = db.Create(testProduct).Error
+	require.NoError(t, err)
+	productID = testProduct.ID
+
+	return userID, productID
+}
+
+func cleanupTestData(db *db.DB, userID uint, productID uint, orderID uint) {
+	db.Unscoped().Where("order_id = ?", orderID).Delete(&OrderItem{})
+	db.Unscoped().Where("id = ?", orderID).Delete(&Order{})
+	db.Unscoped().Where("user_id = ?", userID).Delete(&user.User{})
+	db.Unscoped().Where("id = ?", productID).Delete(&product.Product{})
+}
+
+func generateTestToken(phoneNumber string, secret string) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["phoneNumber"] = phoneNumber
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+	return token.SignedString([]byte(secret))
 }
 
 func TestOrderHandler_Create_E2E(t *testing.T) {
-	db, mock := setupTestDB(t)
+	testDB := getTestDB()
 
 	cfg := &configs.Config{
 		Auth: configs.AuthConfig{
@@ -43,39 +83,14 @@ func TestOrderHandler_Create_E2E(t *testing.T) {
 		},
 	}
 
-	mock.ExpectQuery(`SELECT count\(\*\) FROM "product" WHERE id IN .*`).
-		WithArgs(100).
-		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
-	mock.ExpectQuery(`SELECT \* FROM "user" WHERE phone_number = .*`).
-		WithArgs("89206016463", 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "phone_number", "name", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "89206016463", "Test User", time.Now(), time.Now(), nil))
+	userID, productID := prepareTestData(t, testDB)
 
-	mock.ExpectBegin()
-	mock.ExpectQuery(`INSERT INTO "order"`).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), 1, 0, "Test order notes").
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectQuery(`SELECT \* FROM "product" WHERE .*id.*`).
-		WithArgs(100, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "price", "created_at", "updated_at", "deleted_at"}).
-			AddRow(100, "Product 1", 100.0, time.Now(), time.Now(), nil))
-	mock.ExpectQuery(`INSERT INTO "order_item"`).
-		WithArgs(
-			sqlmock.AnyArg(),
-			sqlmock.AnyArg(),
-			sqlmock.AnyArg(),
-			1,
-			100,
-			2,
-			"100",
-			"0",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectCommit()
+	var orderID uint
+	defer cleanupTestData(testDB, userID, productID, orderID)
 
-	userRepo := user.NewUserRepository(db)
-	orderRepo := NewOrderRepository(db)
-	orderValidator := NewOrderValidator(db)
+	userRepo := user.NewUserRepository(testDB)
+	orderRepo := NewOrderRepository(testDB)
+	orderValidator := NewOrderValidator(testDB)
 
 	orderService := NewOrderService(OrderServiceDeps{
 		OrderRepository: orderRepo,
@@ -93,7 +108,7 @@ func TestOrderHandler_Create_E2E(t *testing.T) {
 	orderRequest := OrderCreateRequest{
 		Notes: "Test order notes",
 		Items: []OrderItemRequest{
-			{ProductID: 100, Quantity: 2},
+			{ProductID: int64(productID), Quantity: 2},
 		},
 	}
 
@@ -110,28 +125,11 @@ func TestOrderHandler_Create_E2E(t *testing.T) {
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusCreated {
-		t.Logf("Response body: %s", rr.Body.String())
-	}
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
-	if rr.Code == http.StatusCreated {
-		var response OrderCreateResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &response)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint(1), response.ID)
-		assert.Equal(t, uint(1), response.UserID)
-		assert.Equal(t, orderRequest.Notes, response.Notes)
-	}
-
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func generateTestToken(phoneNumber string, secret string) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-	claims["phoneNumber"] = phoneNumber
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
-	return token.SignedString([]byte(secret))
+	var response OrderCreateResponse
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, userID, response.UserID)
+	assert.Equal(t, orderRequest.Notes, response.Notes)
 }
