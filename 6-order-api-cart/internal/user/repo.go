@@ -2,6 +2,11 @@ package user
 
 import "purple/links/pkg/db"
 
+type IUserRepository interface {
+	Create(user *User) (*User, error)
+	GetByPhoneNumber(phoneNumber string) (*User, error)
+}
+
 type UserRepository struct {
 	db *db.DB
 }

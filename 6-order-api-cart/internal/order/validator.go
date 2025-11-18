@@ -5,6 +5,11 @@ import (
 	"purple/links/pkg/db"
 )
 
+type IOrderValidator interface {
+	ValidateCreateRequest(req *OrderCreateRequest) error
+	ValidateProductsExist(req *OrderCreateRequest) error
+}
+
 type OrderValidator struct {
 	db *db.DB
 }
@@ -14,14 +19,14 @@ func NewOrderValidator(db *db.DB) *OrderValidator {
 }
 
 func (v *OrderValidator) ValidateCreateRequest(req *OrderCreateRequest) error {
-	if err := v.validateProductsExist(req); err != nil {
+	if err := v.ValidateProductsExist(req); err != nil {
 		return fmt.Errorf("products validation failed: %w", err)
 	}
 
 	return nil
 }
 
-func (v *OrderValidator) validateProductsExist(req *OrderCreateRequest) error {
+func (v *OrderValidator) ValidateProductsExist(req *OrderCreateRequest) error {
 	productIDs := make([]int64, len(req.Items))
 	for i, item := range req.Items {
 		productIDs[i] = item.ProductID
